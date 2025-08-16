@@ -15,6 +15,7 @@ function sanitizeFilename(name) {
 const app = express();
 app.use(express.json());
 
+
 app.post('/api/download', async (req, res) => {
   const url = req.body.url;
   if (!url || (!url.includes('youtube.com') && !url.includes('youtu.be'))) {
@@ -30,21 +31,32 @@ app.post('/api/download', async (req, res) => {
         url
       ]);
       let output = '';
+      let errorOutput = '';
       infoProcess.stdout.on('data', (data) => {
         output += data.toString();
+      });
+      infoProcess.stderr.on('data', (data) => {
+        errorOutput += data.toString();
       });
       infoProcess.on('close', (code) => {
         if (code === 0 && output.trim()) {
           resolve(output.trim());
         } else {
+          console.error('yt-dlp title error:', errorOutput);
           resolve('youtube_audio');
         }
       });
-      infoProcess.on('error', () => resolve('youtube_audio'));
+      infoProcess.on('error', (err) => {
+        console.error('yt-dlp title spawn error:', err);
+        resolve('youtube_audio');
+      });
     });
-  } catch {}
+  } catch (err) {
+    console.error('Error getting video title:', err);
+  }
   const safeTitle = sanitizeFilename(title);
   const output = path.resolve(__dirname, `${safeTitle}.mp3`);
+  let errorOutput = '';
   const ytdlp = spawn(ytDlpCmd, [
     '-x', '--audio-format', 'mp3',
     '-o', `${safeTitle}.%(ext)s`,
@@ -52,13 +64,18 @@ app.post('/api/download', async (req, res) => {
     url
   ], { cwd: __dirname });
 
+  ytdlp.stderr.on('data', (data) => {
+    errorOutput += data.toString();
+  });
+
   ytdlp.on('close', (code) => {
     if (code === 0 && fs.existsSync(output)) {
       res.download(output, `${safeTitle}.mp3`, (err) => {
         fs.unlinkSync(output);
       });
     } else {
-      res.status(500).json({ error: 'Download failed.' });
+      console.error('yt-dlp download error:', errorOutput);
+      res.status(500).json({ error: 'Download failed.', details: errorOutput });
     }
   });
 });
