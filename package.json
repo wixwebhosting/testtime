@@ -1,0 +1,10 @@
+{
+  "name": "yt-dlp-extract",
+  "version": "1.0.0",
+  "main": "extract.js",
+  "type": "module",
+  "scripts": {
+    "start": "node extract.js"
+  },
+  "dependencies": {}
+}

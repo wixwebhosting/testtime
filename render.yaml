@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: yt-dlp-extract
+    env: node
+    plan: free
+    buildCommand: "pip install yt-dlp"
+    startCommand: "node extract.js"
